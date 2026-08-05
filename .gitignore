@@ -1,4 +1,101 @@
-.env
-.venv/
+# ==========================
+# Python
+# ==========================
+
 __pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Environment Variables
+.env
+
+# Vector Stores
 vectorstore/
+faiss_index/
+
+# Logs
+*.log
+
+# ==========================
+# Node.js
+# ==========================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build
+dist/
+build/
+
+# Cache
+.cache/
+.vite/
+
+# ==========================
+# VS Code
+# ==========================
+
+.vscode/
+.history/
+
+# ==========================
+# OS Files
+# ==========================
+
+.DS_Store
+Thumbs.db
+
+# ==========================
+# IDE
+# ==========================
+
+.idea/
+
+# ==========================
+# Coverage
+# ==========================
+
+coverage/
+
+# ==========================
+# Temporary
+# ==========================
+
+tmp/
+temp/
+
+# ==========================
+# Python Secrets
+# ==========================
+
+*.pem
+*.key
+
+# ==========================
+# Chrome Extension
+# ==========================
+
+*.crx
+*.zip
+
+# ==========================
+# Misc
+# ==========================
+
+*.sqlite3
+*.db

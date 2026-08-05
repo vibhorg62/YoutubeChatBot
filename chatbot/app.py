@@ -1,163 +1,101 @@
-import os
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
-
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+import json
+import sys
 from dotenv import load_dotenv
 
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_groq import ChatGroq
-
-from langchain_community.vectorstores import FAISS
-from langchain_core.prompts import PromptTemplate,ChatPromptTemplate
+sys.stdout.reconfigure(encoding="utf-8")
 
 load_dotenv()
 
-#<----------------------------------------------------------- STEP - 1 ---------------------------------------------------------------------->
+from utils.youtube import extract_video_id
+from services.transcript import get_transcript
+from services.vectorstore import create_retriever
+from services.rag import build_chain
 
-# indexing(Document Ingestion)
+# ---------------- CACHE ---------------- #
 
-video_id = "Gfr50f6ZBvo" # youtube video ki id dalna hoga yahan pe
+retriever_cache = {}
+chain_cache = {}
 
-try:
-    ytt_api = YouTubeTranscriptApi()
-
-    transcript = ytt_api.fetch(video_id)
-
-    text = " ".join(chunk.text for chunk in transcript)
-
-    # print(text[:500])      
-    # print(f"\nLength: {len(text)}")
-
-except TranscriptsDisabled:
-    print("No captions available for this video.")
-
-except Exception as e:
-    print(e)
-    
-
-# indexing (Text Splitting)
-
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000,
-    chunk_overlap=200
-)
-
-docs = text_splitter.create_documents([text])
-
-# print(f"Total Chunks: {len(docs)}")
-# print(docs[0].page_content[:300])
+# --------------------------------------- #
 
 
-# indexing (Embedding and Vector Stores)
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
-vector_store = FAISS.from_documents(
-    documents=docs,
-    embedding=embeddings
-)
+def ask_question(video_url, question):
 
-#print("Vector Store Created Successfully")
+    video_id = extract_video_id(video_url)
 
-#<----------------------------------------------------------------- STEP - 2 --------------------------------------------------------->
+    if not video_id:
+        return "Invalid YouTube URL."
 
-# Retreival
+    # ---------- Retriever ---------- #
 
-retriever = vector_store.as_retriever(
-    search_type="similarity",
-    search_kwargs={"k": 4}
-)
+    if video_id in retriever_cache:
 
-# query = "What is this video about?"
+        print(f"Using Cached Retriever : {video_id}", file=sys.stderr)
 
-# docs = retriever.invoke(query)
+        retriever = retriever_cache[video_id]
 
-# print(f"Retrieved {len(docs)} chunks\n")
+    else:
 
-# for i, doc in enumerate(docs):
-#     print(f"Chunk {i+1}")
-#     print(doc.page_content[:300])
-#     print("-"*50)
+        print(f"Creating Retriever : {video_id}", file=sys.stderr)
 
+        text = get_transcript(video_id)
 
-#<------------------------------------------------------------------ STEP - 3 ----------------------------------------------------------->
+        retriever = create_retriever(
+            text=text,
+            video_id=video_id
+        )
 
-# Augmentation
+        retriever_cache[video_id] = retriever
 
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    temperature=0
-)
+    # ---------- Chain ---------- #
 
-prompt = ChatPromptTemplate.from_template("""
-You are a helpful AI assistant.
+    if video_id in chain_cache:
 
-Use ONLY the provided transcript context to answer the question.
+        chain = chain_cache[video_id]
 
-If the context contains partial information, answer using that information.
+    else:
 
-Only say "I don't know based on the provided transcript." if the context contains absolutely no relevant information.
+        chain = build_chain(retriever)
 
-Context:
-{context}
+        chain_cache[video_id] = chain
 
-Question:
-{question}
-
-Answer:
-""")
-
-# question = "What topics are discussed in this podcast?"
-
-# retrieved_docs = retriever.invoke(question)
-
-# context = "\n\n".join(doc.page_content for doc in retrieved_docs)
-
-# # print(prompt.format(
-# #     context=context,
-# #     question=question
-# # ))
-
-#<----------------------------------------------------------------------- STEP - 4 ------------------------------------------------------------------------>
-
-#Generation
-
-from langchain_core.runnables import (
-    RunnableParallel,
-    RunnablePassthrough,
-    RunnableLambda
-)
-from langchain_core.output_parsers import StrOutputParser
-
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
+    return chain.invoke(question)
 
 
-parallel_chain = RunnableParallel(
-    {
-        "context": retriever | RunnableLambda(format_docs),
-        "question": RunnablePassthrough()
-    }
-)
-
-parser = StrOutputParser()
-
-main_chain = (
-    parallel_chain
-    | prompt
-    | llm
-    | parser
-)
-
-def ask_question(question):
-    return main_chain.invoke(question)
+# ---------------- Worker ---------------- #
 
 while True:
-    question = input("\nYou : ")
 
-    if question.lower() == "exit":
+    try:
+
+        line = input()
+
+        if not line.strip():
+            continue
+
+        request = json.loads(line)
+
+        answer = ask_question(
+            request["url"],
+            request["question"]
+        )
+
+        # ONLY JSON ON STDOUT
+        print(
+            json.dumps({
+                "answer": answer
+            }),
+            flush=True
+        )
+
+    except EOFError:
         break
 
-    answer = ask_question(question)
+    except Exception as e:
 
-    print("\nBot :", answer)
+        print(
+            json.dumps({
+                "error": str(e)
+            }),
+            flush=True
+        )
