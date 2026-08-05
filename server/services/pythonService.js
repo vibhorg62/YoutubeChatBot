@@ -7,14 +7,15 @@ python.stderr.setEncoding("utf8");
 
 let buffer = "";
 
-// Queue
 const queue = [];
 let busy = false;
 
 // ---------------- STDERR ---------------- //
 
 python.stderr.on("data", (data) => {
+
     console.log("[PYTHON]", data.toString());
+
 });
 
 // ---------------- STDOUT ---------------- //
@@ -34,10 +35,15 @@ python.stdout.on("data", (data) => {
         let response;
 
         try {
+
             response = JSON.parse(line);
+
         } catch {
+
             console.log("[IGNORED]", line);
+
             continue;
+
         }
 
         const current = queue.shift();
@@ -47,24 +53,33 @@ python.stdout.on("data", (data) => {
         busy = false;
 
         if (response.error) {
+
             current.reject(new Error(response.error));
+
         } else {
+
             current.resolve(response.answer);
+
         }
 
         processQueue();
+
     }
 
 });
 
-// ---------------- EXIT ---------------- //
+// ---------------- PROCESS ---------------- //
 
 python.on("close", (code) => {
+
     console.log("Python Worker Closed:", code);
+
 });
 
 python.on("error", (err) => {
+
     console.error(err);
+
 });
 
 // ---------------- QUEUE ---------------- //
@@ -80,25 +95,33 @@ function processQueue() {
     const current = queue[0];
 
     python.stdin.write(
+
         JSON.stringify({
+
             url: current.url,
-            question: current.question
+            question: current.question,
+            history: current.history
+
         }) + "\n"
+
     );
 
 }
 
 // ---------------- API ---------------- //
 
-export const askPython = (url, question) => {
+export const askPython = (url, question, history) => {
 
     return new Promise((resolve, reject) => {
 
         queue.push({
+
             url,
             question,
+            history,
             resolve,
             reject
+
         });
 
         processQueue();

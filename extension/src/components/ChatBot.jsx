@@ -8,13 +8,15 @@ function ChatBot() {
     const [messages, setMessages] = useState([
         {
             sender: "bot",
-            text: "👋 Hi! Ask me anything about the current YouTube video."
+            text: "Hi! Ask anything related to this video."
         }
     ]);
 
     const [loading, setLoading] = useState(false);
 
     const [videoUrl, setVideoUrl] = useState("");
+
+    const [videoTitle, setVideoTitle] = useState("");
 
     const chatRef = useRef(null);
 
@@ -27,13 +29,11 @@ function ChatBot() {
             },
             (tabs) => {
 
-                if (tabs.length) {
+                if (!tabs.length) return;
 
-                    console.log("Video URL:", tabs[0].url);
+                setVideoUrl(tabs[0].url);
 
-                    setVideoUrl(tabs[0].url);
-
-                }
+                setVideoTitle(tabs[0].title);
 
             }
         );
@@ -67,17 +67,13 @@ function ChatBot() {
 
         try {
 
-            console.log("Sending Request...");
-
             const response = await fetch(
                 "http://localhost:8000/api/chat",
                 {
                     method: "POST",
-
                     headers: {
                         "Content-Type": "application/json"
                     },
-
                     body: JSON.stringify({
                         url: videoUrl,
                         question
@@ -85,28 +81,23 @@ function ChatBot() {
                 }
             );
 
-            console.log("Status:", response.status);
-
             if (!response.ok) {
                 throw new Error("Server Error");
             }
 
             const data = await response.json();
 
-            console.log("Backend Response:", data);
-
             setMessages(prev => [
                 ...prev,
                 {
                     sender: "bot",
-                    text: data.data || "No response received."
+                    text: data.data || "No response."
                 }
             ]);
 
         }
-        catch (err) {
 
-            console.error(err);
+        catch (err) {
 
             setMessages(prev => [
                 ...prev,
@@ -117,6 +108,7 @@ function ChatBot() {
             ]);
 
         }
+
         finally {
 
             setLoading(false);
@@ -129,39 +121,70 @@ function ChatBot() {
 
     return (
 
-        <div className="flex-1 flex flex-col">
+        <div className="flex flex-col h-screen bg-zinc-950 text-white">
 
-            <div
-                ref={chatRef}
-                className="flex-1 overflow-y-auto p-4 space-y-4"
-            >
+            {/* Header */}
 
-                <div className="text-xs text-zinc-400 bg-zinc-900 rounded-lg p-3 break-all">
+            {/* Current Video */}
 
-                    📺 {videoUrl || "Open a YouTube Video"}
+            <div className="px-4 py-3">
+
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+
+                    <p className="text-xs text-zinc-500">
+
+                        Current Video
+
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium truncate">
+
+                        {videoTitle || "Open any YouTube Video"}
+
+                    </p>
 
                 </div>
 
-                {
-                    messages.map((msg, index) => (
+            </div>
 
-                        <Message
-                            key={index}
-                            sender={msg.sender}
-                            text={msg.text}
-                        />
+            {/* Chat */}
 
-                    ))
-                }
+            <div
+                ref={chatRef}
+                className="flex-1 overflow-y-auto px-4 pb-4"
+            >
 
-                {
-                    loading && <Loader />
-                }
+                <div className="space-y-4">
+
+                    {
+
+                        messages.map((msg, index) => (
+
+                            <Message
+                                key={index}
+                                sender={msg.sender}
+                                text={msg.text}
+                            />
+
+                        ))
+
+                    }
+
+                    {
+
+                        loading && <Loader />
+
+                    }
+
+                </div>
 
             </div>
 
+            {/* Input */}
+
             <Input
                 onSend={sendMessage}
+                loading={loading}
             />
 
         </div>

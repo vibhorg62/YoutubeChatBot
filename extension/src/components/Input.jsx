@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { SendHorizontal } from "lucide-react";
 
-function Input({ onSend }) {
+function Input({ onSend, loading }) {
 
     const [question, setQuestion] = useState("");
 
     const handleSend = () => {
 
-        if (!question.trim()) return;
+        if (!question.trim() || loading) return;
 
         onSend(question);
 
@@ -17,7 +17,9 @@ function Input({ onSend }) {
 
     const handleKeyDown = (e) => {
 
-        if (e.key === "Enter") {
+        if (e.key === "Enter" && !e.shiftKey) {
+
+            e.preventDefault();
 
             handleSend();
 
@@ -27,35 +29,58 @@ function Input({ onSend }) {
 
     return (
 
-        <div className="border-t border-zinc-800 p-3 flex gap-2">
+        <div className="border-t border-zinc-800 bg-zinc-950 p-4">
 
-            <input
+            <div className="flex items-end gap-3 bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3">
 
-                type="text"
+                <textarea
 
-                placeholder="Ask anything..."
+                    rows={1}
 
-                value={question}
+                    placeholder="Ask anything about this video..."
 
-                onChange={(e) => setQuestion(e.target.value)}
+                    value={question}
 
-                onKeyDown={handleKeyDown}
+                    onChange={(e) => setQuestion(e.target.value)}
 
-                className="flex-1 bg-zinc-900 rounded-lg px-4 py-2 outline-none"
+                    onKeyDown={handleKeyDown}
 
-            />
+                    className="
+                        flex-1
+                        bg-transparent
+                        resize-none
+                        outline-none
+                        text-sm
+                        text-white
+                        placeholder:text-zinc-500
+                        max-h-32
+                    "
 
-            <button
+                />
 
-                onClick={handleSend}
+                <button
 
-                className="bg-blue-600 hover:bg-blue-700 transition p-3 rounded-lg"
+                    onClick={handleSend}
 
-            >
+                    disabled={loading}
 
-                <SendHorizontal size={18} />
+                    className="
+                        bg-blue-600
+                        hover:bg-blue-700
+                        disabled:bg-zinc-700
+                        disabled:cursor-not-allowed
+                        p-3
+                        rounded-xl
+                        transition
+                    "
 
-            </button>
+                >
+
+                    <SendHorizontal size={18} />
+
+                </button>
+
+            </div>
 
         </div>
 

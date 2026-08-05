@@ -2,7 +2,9 @@ import json
 import sys
 from dotenv import load_dotenv
 
-sys.stdout.reconfigure(encoding="utf-8")
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+sys.stdin.reconfigure(encoding="utf-8", errors="replace")
 
 load_dotenv()
 
@@ -11,34 +13,55 @@ from services.transcript import get_transcript
 from services.vectorstore import create_retriever
 from services.rag import build_chain
 
+
 # ---------------- CACHE ---------------- #
 
 retriever_cache = {}
-chain_cache = {}
 
 # --------------------------------------- #
 
 
-def ask_question(video_url, question):
+def clean_text(text):
+    if isinstance(text, str):
+        return text.encode("utf-8", "replace").decode("utf-8")
+    return text
+
+
+def ask_question(video_url, question, history):
 
     video_id = extract_video_id(video_url)
 
     if not video_id:
         return "Invalid YouTube URL."
 
+    question = clean_text(question)
+    cleaned_history = []
+    for item in history:
+        cleaned_history.append({
+            "role": clean_text(item.get("role", "")),
+            "content": clean_text(item.get("content", ""))
+        })
+
     # ---------- Retriever ---------- #
 
     if video_id in retriever_cache:
 
-        print(f"Using Cached Retriever : {video_id}", file=sys.stderr)
+        print(
+            f"Using Cached Retriever : {video_id}",
+            file=sys.stderr
+        )
 
         retriever = retriever_cache[video_id]
 
     else:
 
-        print(f"Creating Retriever : {video_id}", file=sys.stderr)
+        print(
+            f"Creating Retriever : {video_id}",
+            file=sys.stderr
+        )
 
         text = get_transcript(video_id)
+        text = clean_text(text)
 
         retriever = create_retriever(
             text=text,
@@ -49,17 +72,14 @@ def ask_question(video_url, question):
 
     # ---------- Chain ---------- #
 
-    if video_id in chain_cache:
+    chain = build_chain(
+        retriever,
+        cleaned_history
+    )
 
-        chain = chain_cache[video_id]
+    answer = chain.invoke(question)
 
-    else:
-
-        chain = build_chain(retriever)
-
-        chain_cache[video_id] = chain
-
-    return chain.invoke(question)
+    return clean_text(str(answer))
 
 
 # ---------------- Worker ---------------- #
@@ -75,16 +95,23 @@ while True:
 
         request = json.loads(line)
 
+        url = request["url"]
+        question = request["question"]
+        history = request.get("history", [])
+
         answer = ask_question(
-            request["url"],
-            request["question"]
+            url,
+            question,
+            history
         )
 
-        # ONLY JSON ON STDOUT
         print(
-            json.dumps({
-                "answer": answer
-            }),
+            json.dumps(
+                {
+                    "answer": answer
+                },
+                ensure_ascii=False
+            ),
             flush=True
         )
 
@@ -93,9 +120,14 @@ while True:
 
     except Exception as e:
 
+        err_msg = clean_text(str(e))
+
         print(
-            json.dumps({
-                "error": str(e)
-            }),
+            json.dumps(
+                {
+                    "error": err_msg
+                },
+                ensure_ascii=False
+            ),
             flush=True
         )
