@@ -1,6 +1,17 @@
 import { spawn } from "child_process";
 
-const python = spawn("python", ["../chatbot/app.py"]);
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const pythonScript = path.resolve(
+    __dirname,
+    "../../chatbot/app.py"
+);
+
+const python = spawn("python", [pythonScript]);
 
 python.stdout.setEncoding("utf8");
 python.stderr.setEncoding("utf8");
