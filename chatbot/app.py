@@ -61,7 +61,8 @@ def ask_question(video_url, question, history):
 
         print("4. Fetching Transcript...", file=sys.stderr)
 
-        text = get_transcript(video_id)
+        # ✅ Supadata uses full YouTube URL
+        text = get_transcript(video_url)
 
         print("5. Transcript Fetched", file=sys.stderr)
 

@@ -1,35 +1,47 @@
-from youtube_transcript_api import (
-    YouTubeTranscriptApi,
-    TranscriptsDisabled,
-    NoTranscriptFound
-)
+import os
+import requests
 
 
-def get_transcript(video_id):
+SUPADATA_URL = "https://api.supadata.ai/v1/transcript"
 
-    try:
 
-        api = YouTubeTranscriptApi()
+def get_transcript(video_url):
 
-        transcript = api.fetch(
-            video_id,
-            languages=['en', 'hi', 'mr', 'bn', 'ta', 'te', 'kn', 'ml', 'gu', 'pa']
-        )
+    api_key = os.getenv("SUPADATA_API_KEY")
 
-        text = " ".join(
-            getattr(chunk, 'text', str(chunk))
-            for chunk in transcript
-        )
+    if not api_key:
+        raise Exception("SUPADATA_API_KEY not found.")
 
-        text = text.encode("utf-8", "replace").decode("utf-8")
+    headers = {
+        "x-api-key": api_key
+    }
 
-        return text
+    params = {
+        "url": video_url,
+        "text": "true"
+    }
 
-    except TranscriptsDisabled:
-        raise Exception("Transcript is disabled for this video.")
+    response = requests.get(
+        SUPADATA_URL,
+        headers=headers,
+        params=params,
+        timeout=60
+    )
 
-    except NoTranscriptFound:
-        raise Exception("No transcript found for the requested video.")
+    if response.status_code != 200:
+        raise Exception(response.text)
 
-    except Exception as e:
-        raise Exception(str(e))
+    data = response.json()
+
+    if "content" not in data:
+        raise Exception("Transcript not found.")
+
+    transcript = " ".join(
+        chunk["text"]
+        for chunk in data["content"]
+    )
+
+    return transcript.encode(
+        "utf-8",
+        "replace"
+    ).decode("utf-8")
