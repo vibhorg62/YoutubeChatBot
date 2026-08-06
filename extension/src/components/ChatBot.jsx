@@ -68,7 +68,7 @@ function ChatBot() {
         try {
 
             const response = await fetch(
-                "http://localhost:8000/api/chat",
+                "https://youtube-ai-chat.onrender.com/api/chat",
                 {
                     method: "POST",
                     headers: {
