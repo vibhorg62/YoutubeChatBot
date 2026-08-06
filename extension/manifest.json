@@ -9,10 +9,11 @@
     "tabs"
   ],
 
-  "host_permissions": [
-    "http://localhost:8000/*",
-    "https://www.youtube.com/*"
-  ],
+ "host_permissions": [
+  "http://localhost:8000/*",
+  "https://youtube-ai-chat.onrender.com/*",
+  "https://www.youtube.com/*"
+],
 
   "action": {
     "default_popup": "index.html",
