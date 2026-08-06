@@ -123,6 +123,8 @@ function processQueue() {
 
 export const askPython = (url, question, history) => {
 
+    console.log("🐍 Sending to Python");
+
     return new Promise((resolve, reject) => {
 
         queue.push({

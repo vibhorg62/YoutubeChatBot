@@ -8,6 +8,7 @@ let history = [];
 // ----------------------------------------------------- //
 
 export const chat = async (req, res) => {
+    console.log("✅ Request Received");
 
     try {
 
