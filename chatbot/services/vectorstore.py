@@ -44,6 +44,8 @@ def create_retriever(text, video_id):
             allow_dangerous_deserialization=True
         )
 
+        print("Existing VectorStore Loaded", file=sys.stderr)
+
     else:
 
         splitter = RecursiveCharacterTextSplitter(
@@ -55,16 +57,24 @@ def create_retriever(text, video_id):
 
         print(f"Chunks : {len(docs)}", file=sys.stderr)
 
+        print("1. Before FAISS", file=sys.stderr)
+
         vector_store = FAISS.from_documents(
             docs,
             embedding_model
         )
 
+        print("2. After FAISS", file=sys.stderr)
+
+        print("3. Before Save", file=sys.stderr)
+
         vector_store.save_local(folder_path)
+
+        print("4. After Save", file=sys.stderr)
 
     print("Retriever Ready", file=sys.stderr)
 
     return vector_store.as_retriever(
         search_type="similarity",
-        search_kwargs={"k":4}
+        search_kwargs={"k": 4}
     )
