@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 
 
@@ -28,20 +29,49 @@ def get_transcript(video_url):
         timeout=60
     )
 
+    print("STATUS CODE:", response.status_code, file=sys.stderr)
+    print("RAW RESPONSE:", response.text, file=sys.stderr)
+
     if response.status_code != 200:
         raise Exception(response.text)
 
     data = response.json()
 
-    if "content" not in data:
-        raise Exception("Transcript not found.")
+    print("PARSED RESPONSE:", data, file=sys.stderr)
 
-    transcript = " ".join(
-        chunk["text"]
-        for chunk in data["content"]
-    )
+    # ---------------- Case 1 ----------------
+    # content = "whole transcript"
 
-    return transcript.encode(
-        "utf-8",
-        "replace"
-    ).decode("utf-8")
+    if isinstance(data.get("content"), str):
+        return data["content"]
+
+    # ---------------- Case 2 ----------------
+    # content = [{text:"..."}, ...]
+
+    if isinstance(data.get("content"), list):
+
+        if len(data["content"]) == 0:
+            raise Exception("Transcript is empty.")
+
+        # list of objects
+        if isinstance(data["content"][0], dict):
+
+            transcript = " ".join(
+                item.get("text", "")
+                for item in data["content"]
+            )
+
+            return transcript
+
+        # list of strings
+        if isinstance(data["content"][0], str):
+
+            return " ".join(data["content"])
+
+    # ---------------- Case 3 ----------------
+    # text = "whole transcript"
+
+    if isinstance(data.get("text"), str):
+        return data["text"]
+
+    raise Exception(f"Unexpected Supadata response: {data}")
