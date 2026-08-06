@@ -11,7 +11,7 @@ const pythonScript = path.resolve(
     "../../chatbot/app.py"
 );
 
-const python = spawn("python", [pythonScript]);
+const python = spawn("python3", [pythonScript]);
 
 python.stdout.setEncoding("utf8");
 python.stderr.setEncoding("utf8");

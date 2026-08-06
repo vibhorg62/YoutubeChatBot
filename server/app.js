@@ -12,6 +12,9 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api", chatRoutes);
+app.get("/", (req, res) => {
+    res.send("YouTube AI Backend Running 🚀");
+});
 
 const PORT = process.env.PORT || 8000;
 
