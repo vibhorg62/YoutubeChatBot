@@ -10,15 +10,11 @@ embeddings = None
 
 
 def get_embeddings():
-
     global embeddings
 
     if embeddings is None:
-
         print("Loading FastEmbed...", file=sys.stderr)
-
         embeddings = FastEmbedEmbeddings()
-
         print("FastEmbed Loaded", file=sys.stderr)
 
     return embeddings
@@ -29,7 +25,6 @@ def create_retriever(text, video_id):
     print("Creating Retriever...", file=sys.stderr)
 
     folder_path = os.path.join("vectorstore", video_id)
-
     os.makedirs("vectorstore", exist_ok=True)
 
     embedding_model = get_embeddings()
@@ -44,8 +39,6 @@ def create_retriever(text, video_id):
             allow_dangerous_deserialization=True
         )
 
-        print("Existing VectorStore Loaded", file=sys.stderr)
-
     else:
 
         splitter = RecursiveCharacterTextSplitter(
@@ -57,20 +50,26 @@ def create_retriever(text, video_id):
 
         print(f"Chunks : {len(docs)}", file=sys.stderr)
 
-        print("1. Before FAISS", file=sys.stderr)
+        print("1. Generating Embeddings...", file=sys.stderr)
 
-        vector_store = FAISS.from_documents(
-            docs,
-            embedding_model
+        texts = [doc.page_content for doc in docs]
+
+        vectors = embedding_model.embed_documents(texts)
+
+        print("2. Embeddings Generated", file=sys.stderr)
+
+        print("3. Creating FAISS...", file=sys.stderr)
+
+        vector_store = FAISS.from_embeddings(
+            text_embeddings=list(zip(texts, vectors)),
+            embedding=embedding_model
         )
 
-        print("2. After FAISS", file=sys.stderr)
-
-        print("3. Before Save", file=sys.stderr)
+        print("4. FAISS Created", file=sys.stderr)
 
         vector_store.save_local(folder_path)
 
-        print("4. After Save", file=sys.stderr)
+        print("5. Saved", file=sys.stderr)
 
     print("Retriever Ready", file=sys.stderr)
 
