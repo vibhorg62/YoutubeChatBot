@@ -10,11 +10,15 @@ embeddings = None
 
 
 def get_embeddings():
+
     global embeddings
 
     if embeddings is None:
+
         print("Loading FastEmbed...", file=sys.stderr)
+
         embeddings = FastEmbedEmbeddings()
+
         print("FastEmbed Loaded", file=sys.stderr)
 
     return embeddings
@@ -25,9 +29,12 @@ def create_retriever(text, video_id):
     print("Creating Retriever...", file=sys.stderr)
 
     folder_path = os.path.join("vectorstore", video_id)
+
     os.makedirs("vectorstore", exist_ok=True)
 
     embedding_model = get_embeddings()
+
+    # ---------------- LOAD ---------------- #
 
     if os.path.exists(folder_path):
 
@@ -39,10 +46,14 @@ def create_retriever(text, video_id):
             allow_dangerous_deserialization=True
         )
 
+        print("Existing VectorStore Loaded", file=sys.stderr)
+
+    # ---------------- CREATE ---------------- #
+
     else:
 
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
+            chunk_size=3000,
             chunk_overlap=200
         )
 
@@ -50,11 +61,19 @@ def create_retriever(text, video_id):
 
         print(f"Chunks : {len(docs)}", file=sys.stderr)
 
-        print("1. Generating Embeddings...", file=sys.stderr)
-
         texts = [doc.page_content for doc in docs]
 
-        vectors = embedding_model.embed_documents(texts)
+        vectors = []
+
+        print("1. Generating Embeddings...", file=sys.stderr)
+
+        for i, txt in enumerate(texts):
+
+            print(f"Embedding {i+1}/{len(texts)}", file=sys.stderr)
+
+            vec = embedding_model.embed_documents([txt])
+
+            vectors.extend(vec)
 
         print("2. Embeddings Generated", file=sys.stderr)
 
@@ -67,9 +86,11 @@ def create_retriever(text, video_id):
 
         print("4. FAISS Created", file=sys.stderr)
 
+        print("5. Saving VectorStore...", file=sys.stderr)
+
         vector_store.save_local(folder_path)
 
-        print("5. Saved", file=sys.stderr)
+        print("6. VectorStore Saved", file=sys.stderr)
 
     print("Retriever Ready", file=sys.stderr)
 
