@@ -8,25 +8,40 @@ from langchain_community.vectorstores import FAISS
 
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
-print("Loading Embedding Model...", file=sys.stderr)
+# Lazy Loading
+embeddings = None
 
-embeddings = HuggingFaceEmbeddings(
-    model_name=MODEL_NAME
-)
 
-print("Embedding Model Loaded", file=sys.stderr)
+def get_embeddings():
+
+    global embeddings
+
+    if embeddings is None:
+
+        print("Loading Embedding Model...", file=sys.stderr)
+
+        embeddings = HuggingFaceEmbeddings(
+            model_name=MODEL_NAME
+        )
+
+        print("Embedding Model Loaded", file=sys.stderr)
+
+    return embeddings
 
 
 def create_retriever(text, video_id):
 
     print("A. create_retriever()", file=sys.stderr)
 
-    # Ensure parent folder exists
+    # Create parent directory
     os.makedirs("vectorstore", exist_ok=True)
 
     folder_path = os.path.join("vectorstore", video_id)
 
     print(f"VectorStore Path : {folder_path}", file=sys.stderr)
+
+    # Load embedding model only when needed
+    embedding_model = get_embeddings()
 
     # ---------------- LOAD ---------------- #
 
@@ -36,7 +51,7 @@ def create_retriever(text, video_id):
 
         vector_store = FAISS.load_local(
             folder_path,
-            embeddings,
+            embedding_model,
             allow_dangerous_deserialization=True
         )
 
@@ -61,12 +76,10 @@ def create_retriever(text, video_id):
 
         vector_store = FAISS.from_documents(
             docs,
-            embeddings
+            embedding_model
         )
 
         print("G. FAISS Created", file=sys.stderr)
-
-        os.makedirs(folder_path, exist_ok=True)
 
         print("H. Saving VectorStore...", file=sys.stderr)
 
